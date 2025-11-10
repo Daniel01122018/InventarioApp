@@ -2,10 +2,14 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
+import { es } from 'date-fns/locale';
+import { setDefaultOptions } from 'date-fns';
+
+setDefaultOptions({ locale: es });
 
 export const metadata: Metadata = {
   title: 'ExpiryGuard',
-  description: 'Manage your product expiry dates with ease.',
+  description: 'Gestiona las fechas de caducidad de tus productos con facilidad.',
 };
 
 export default function RootLayout({
@@ -14,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
+import { es } from 'date-fns/locale';
 import { CalendarIcon, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,10 +38,10 @@ import type { Product } from "@/lib/types";
 
 const productFormSchema = z.object({
   name: z.string().min(2, {
-    message: "Product name must be at least 2 characters.",
+    message: "El nombre del producto debe tener al menos 2 caracteres.",
   }),
   expiryDate: z.date({
-    required_error: "An expiration date is required.",
+    required_error: "Se requiere una fecha de caducidad.",
   }),
 });
 
@@ -70,14 +71,14 @@ export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Add Product
+          Añadir Producto
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Product</DialogTitle>
+          <DialogTitle>Añadir Nuevo Producto</DialogTitle>
           <DialogDescription>
-            Enter the product details below. Click save when you're done.
+            Introduce los detalles del producto a continuación. Haz clic en guardar cuando hayas terminado.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -88,9 +89,9 @@ export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Name</FormLabel>
+                    <FormLabel>Nombre del Producto</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Organic Milk" {...field} />
+                      <Input placeholder="p. ej., Leche Orgánica" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -101,7 +102,7 @@ export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
                 name="expiryDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Expiration Date</FormLabel>
+                    <FormLabel>Fecha de Caducidad</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -113,9 +114,9 @@ export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "PPP")
+                              format(field.value, "PPP", { locale: es })
                             ) : (
-                              <span>Pick a date</span>
+                              <span>Elige una fecha</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -128,6 +129,7 @@ export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
                           onSelect={field.onChange}
                           disabled={(date) => date < new Date("1900-01-01")}
                           initialFocus
+                          locale={es}
                         />
                       </PopoverContent>
                     </Popover>
@@ -137,7 +139,7 @@ export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Save Product</Button>
+              <Button type="submit">Guardar Producto</Button>
             </DialogFooter>
           </form>
         </Form>

@@ -21,6 +21,14 @@ export function DashboardStats({ products }: DashboardStatsProps) {
     let expiringSoon = 0;
     let expired = 0;
 
+    if (!products) {
+      return {
+        total: 0,
+        expiringSoon: 0,
+        expired: 0,
+      };
+    }
+
     products.forEach((product) => {
       const daysUntilExpiry = differenceInDays(product.expiryDate, now);
       if (daysUntilExpiry < 0) {
@@ -41,32 +49,32 @@ export function DashboardStats({ products }: DashboardStatsProps) {
     <div className="grid gap-4 md:grid-cols-3 p-4 sm:p-6">
       <Card className="transition-all hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+          <CardTitle className="text-sm font-medium">Artículos Totales</CardTitle>
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.total}</div>
-          <p className="text-xs text-muted-foreground">in your inventory</p>
+          <p className="text-xs text-muted-foreground">en tu inventario</p>
         </CardContent>
       </Card>
       <Card className="transition-all hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
+          <CardTitle className="text-sm font-medium">A punto de caducar</CardTitle>
           <BellRing className="h-4 w-4 text-accent-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-accent">{stats.expiringSoon}</div>
-          <p className="text-xs text-muted-foreground">Within the next 7 days</p>
+          <p className="text-xs text-muted-foreground">Dentro de los próximos 7 días</p>
         </CardContent>
       </Card>
       <Card className="transition-all hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Expired Items</CardTitle>
+          <CardTitle className="text-sm font-medium">Artículos Caducados</CardTitle>
           <AlertTriangle className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-destructive">{stats.expired}</div>
-          <p className="text-xs text-muted-foreground">Have passed expiry date</p>
+          <p className="text-xs text-muted-foreground">Han pasado la fecha de caducidad</p>
         </CardContent>
       </Card>
     </div>

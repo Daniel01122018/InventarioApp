@@ -1,48 +1,60 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { addDays } from 'date-fns';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/lib/db';
 import { useToast } from "@/hooks/use-toast";
 import type { Product, SortConfig } from "@/lib/types";
 import { DashboardHeader } from './dashboard-header';
 import { DashboardStats } from './dashboard-stats';
 import { ProductList } from './product-list';
 
-const initialProducts: Product[] = [
-  { id: '1', name: 'Organic Milk', expiryDate: addDays(new Date(), 5) },
-  { id: '2', name: 'Free-range Eggs', expiryDate: addDays(new Date(), 12) },
-  { id: '3', name: 'Greek Yogurt', expiryDate: addDays(new Date(), -2) },
-  { id: '4', name: 'Cheddar Cheese', expiryDate: addDays(new Date(), 30) },
-  { id: '5', name: 'Chicken Breast', expiryDate: addDays(new Date(), 2) },
-  { id: '6', name: 'Bag of Spinach', expiryDate: addDays(new Date(), 7) },
-];
-
 export function ExpiryGuardDashboard() {
   const { toast } = useToast();
-  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'expiryDate', direction: 'ascending' });
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-    const newProduct = { ...product, id: crypto.randomUUID() };
-    setProducts(prevProducts => [...prevProducts, newProduct]);
-    toast({
-      title: "Product Added",
-      description: `${product.name} has been added to your inventory.`,
-    });
+  const products = useLiveQuery(() => db.products.toArray(), []);
+
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    try {
+      const newProduct = { ...product, id: crypto.randomUUID() };
+      await db.products.add(newProduct);
+      toast({
+        title: "Producto Añadido",
+        description: `${product.name} ha sido añadido a tu inventario.`,
+      });
+    } catch (error) {
+      console.error("Failed to add product: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo añadir el producto.",
+      });
+    }
   };
 
-  const deleteProduct = (productId: string) => {
-    const productName = products.find(p => p.id === productId)?.name;
-    setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
-    toast({
-      variant: "destructive",
-      title: "Product Deleted",
-      description: `${productName || 'The product'} has been removed.`,
-    });
+  const deleteProduct = async (productId: string) => {
+    try {
+        const product = await db.products.get(productId);
+        await db.products.delete(productId);
+        toast({
+            variant: "destructive",
+            title: "Producto Eliminado",
+            description: `${product?.name || 'El producto'} ha sido eliminado.`,
+        });
+    } catch (error) {
+        console.error("Failed to delete product: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No se pudo eliminar el producto.",
+        });
+    }
   };
 
   const filteredProducts = useMemo(() => {
+    if (!products) return [];
     return products.filter(product =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -81,7 +93,7 @@ export function ExpiryGuardDashboard() {
     <div className="container mx-auto max-w-7xl">
       <div className="m-2 lg:m-4 border rounded-lg shadow-sm bg-card">
         <DashboardHeader onProductAdd={addProduct} />
-        <DashboardStats products={products} />
+        <DashboardStats products={products || []} />
         <ProductList
           products={sortedProducts}
           onDeleteProduct={deleteProduct}
