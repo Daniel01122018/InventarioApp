@@ -8,11 +8,11 @@ import {
 } from "@/components/ui/card";
 import { differenceInDays } from "date-fns";
 import { Package, BellRing, AlertTriangle } from "lucide-react";
-import type { Product } from "@/lib/types";
+import type { ProductWithInventory } from "@/lib/types";
 import { useMemo } from "react";
 
 interface DashboardStatsProps {
-  products: Product[];
+  products: ProductWithInventory[];
 }
 
 export function DashboardStats({ products }: DashboardStatsProps) {
@@ -20,6 +20,7 @@ export function DashboardStats({ products }: DashboardStatsProps) {
     const now = new Date();
     let expiringSoon = 0;
     let expired = 0;
+    let totalItems = 0;
 
     if (!products) {
       return {
@@ -30,16 +31,19 @@ export function DashboardStats({ products }: DashboardStatsProps) {
     }
 
     products.forEach((product) => {
-      const daysUntilExpiry = differenceInDays(product.expiryDate, now);
-      if (daysUntilExpiry < 0) {
-        expired++;
-      } else if (daysUntilExpiry <= 7) {
-        expiringSoon++;
-      }
+      totalItems += product.totalQuantity;
+      product.inventory.forEach(item => {
+        const daysUntilExpiry = differenceInDays(item.expiryDate, now);
+        if (daysUntilExpiry < 0) {
+          expired += item.quantity;
+        } else if (daysUntilExpiry <= 7) {
+          expiringSoon += item.quantity;
+        }
+      });
     });
 
     return {
-      total: products.length,
+      total: totalItems,
       expiringSoon,
       expired,
     };

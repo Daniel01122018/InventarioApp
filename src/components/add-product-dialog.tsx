@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,13 +33,23 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
 const productFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "El nombre del producto debe tener al menos 2 caracteres.",
+  product: z.object({
+    id: z.string().optional(),
+    name: z.string().min(2, "El nombre del producto debe tener al menos 2 caracteres."),
   }),
+  quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1."),
   expiryDate: z.date({
     required_error: "Se requiere una fecha de caducidad.",
   }),
@@ -48,21 +58,25 @@ const productFormSchema = z.object({
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface AddProductDialogProps {
-  onProductAdd: (product: Omit<Product, 'id'>) => void;
+  products: Product[];
+  onProductAdd: (values: ProductFormValues) => void;
 }
 
-export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
+export function AddProductDialog({ products, onProductAdd }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
+  const [comboOpen, setComboOpen] = useState(false);
+  
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      name: "",
+      product: { name: "" },
+      quantity: 1,
     },
   });
 
   function onSubmit(data: ProductFormValues) {
     onProductAdd(data);
-    form.reset();
+    form.reset({ product: { name: "" }, quantity: 1, expiryDate: undefined });
     setOpen(false);
   }
 
@@ -86,12 +100,77 @@ export function AddProductDialog({ onProductAdd }: AddProductDialogProps) {
             <div className="space-y-4 py-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="product"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Nombre del Producto</FormLabel>
+                    <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value.name && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value.name
+                              ? products.find(
+                                  (p) => p.name.toLowerCase() === field.value.name.toLowerCase()
+                                )?.name ?? field.value.name
+                              : "Selecciona o crea un producto"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Buscar producto..." 
+                            onValueChange={(search) => {
+                                field.onChange({ name: search });
+                            }}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No se encontró el producto. Se creará uno nuevo.</CommandEmpty>
+                            <CommandGroup>
+                              {products.map((product) => (
+                                <CommandItem
+                                  value={product.name}
+                                  key={product.id}
+                                  onSelect={() => {
+                                    form.setValue("product", product);
+                                    setComboOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      product.id === field.value.id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {product.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                           </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre del Producto</FormLabel>
+                    <FormLabel>Cantidad</FormLabel>
                     <FormControl>
-                      <Input placeholder="p. ej., Leche Orgánica" {...field} />
+                      <Input type="number" placeholder="p. ej., 10" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
