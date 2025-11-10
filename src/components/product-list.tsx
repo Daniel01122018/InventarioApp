@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "./ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import React from "react";
 
 type SortableKeys = 'name' | 'totalQuantity' | 'nextExpiryDate';
 
@@ -131,7 +132,7 @@ export function ProductList({
                     
                     return (
                      <Collapsible asChild key={product.id} open={isOpen} onOpenChange={() => toggleCollapsible(product.id)}>
-                        <tbody key={product.id}>
+                        <React.Fragment>
                           <TableRow className="hover:bg-muted/50 cursor-pointer">
                             <TableCell>
                               <CollapsibleTrigger asChild>
@@ -197,7 +198,7 @@ export function ProductList({
                                 </TableCell>
                               </TableRow>
                           </CollapsibleContent>
-                        </tbody>
+                        </React.Fragment>
                       </Collapsible>
                     );
                   })
