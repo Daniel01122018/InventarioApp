@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useToast } from "@/hooks/use-toast";
-import type { Product, ProductWithInventory, SortConfig, InventoryItem, Unit } from "@/lib/types";
+import type { Product, ProductWithInventory, SortConfig, InventoryItem, Unit, ConsumedItem } from "@/lib/types";
 import { DashboardHeader } from './dashboard-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProductList } from './product-list';
@@ -80,6 +80,56 @@ export function ExpiryGuardDashboard() {
             title: "Error",
             description: "No se pudo eliminar el lote.",
         });
+    }
+  };
+
+  const consumeInventoryItem = async (inventoryItemId: string, quantityToConsume: number) => {
+    try {
+      const item = await db.inventory.get(inventoryItemId);
+      if (!item) {
+        throw new Error("El lote de inventario no existe.");
+      }
+
+      const product = await db.products.get(item.productId);
+      if (!product) {
+        throw new Error("El producto asociado al lote no existe.");
+      }
+
+      if (quantityToConsume > item.quantity) {
+        throw new Error("No se puede consumir más de lo que hay en el lote.");
+      }
+
+      const consumedItem: ConsumedItem = {
+        id: crypto.randomUUID(),
+        productId: item.productId,
+        productName: product.name,
+        quantity: quantityToConsume,
+        unit: item.unit,
+        consumedDate: new Date(),
+      };
+
+      await db.consumedItems.add(consumedItem);
+
+      const newQuantity = item.quantity - quantityToConsume;
+      if (newQuantity > 0) {
+        await db.inventory.update(inventoryItemId, { quantity: newQuantity });
+      } else {
+        await db.inventory.delete(inventoryItemId);
+      }
+
+      toast({
+        title: "Producto Consumido",
+        description: `Se han consumido ${quantityToConsume} ${item.unit} de ${product.name}.`,
+      });
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "No se pudo consumir el producto.";
+      console.error("Failed to consume product: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
     }
   };
   
@@ -174,7 +224,9 @@ export function ExpiryGuardDashboard() {
       <div className="m-2 lg:m-4 border rounded-lg shadow-sm bg-card">
         <DashboardHeader 
           products={products || []}
+          productsWithInventory={productsWithInventory}
           onProductAdd={addProduct}
+          onConsumeProduct={consumeInventoryItem}
         />
         <Tabs defaultValue="inventory" className="w-full">
             <div className='flex justify-center border-b'>

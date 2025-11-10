@@ -1,13 +1,16 @@
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, MinusSquare } from "lucide-react";
 import { AddProductDialog } from "./add-product-dialog";
-import type { Product } from "@/lib/types";
+import { ConsumeProductDialog } from "./consume-product-dialog";
+import type { Product, ProductWithInventory } from "@/lib/types";
 
 interface DashboardHeaderProps {
   products: Product[];
+  productsWithInventory: ProductWithInventory[];
   onProductAdd: (values: { product: { id?: string; name: string; unit: 'unidades' | 'kg' | 'g' | 'lb' | 'litros' | 'ml'; }; quantity: number; expiryDate: Date; }) => void;
+  onConsumeProduct: (inventoryItemId: string, quantity: number) => Promise<void>;
 }
 
-export function DashboardHeader({ products, onProductAdd }: DashboardHeaderProps) {
+export function DashboardHeader({ products, productsWithInventory, onProductAdd, onConsumeProduct }: DashboardHeaderProps) {
   return (
     <header className="flex items-center justify-between border-b p-4 sm:p-6">
       <div className="flex items-center gap-3">
@@ -17,6 +20,10 @@ export function DashboardHeader({ products, onProductAdd }: DashboardHeaderProps
         </h1>
       </div>
       <div className="flex items-center gap-4">
+        <ConsumeProductDialog 
+          productsWithInventory={productsWithInventory}
+          onConsume={onConsumeProduct}
+        />
         <AddProductDialog products={products} onProductAdd={onProductAdd} />
       </div>
     </header>

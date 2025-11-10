@@ -1,16 +1,22 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Product, InventoryItem } from './types';
+import type { Product, InventoryItem, ConsumedItem } from './types';
 
 export const db = new Dexie('TuInventarioDatabase') as Dexie & {
   products: EntityTable<Product, 'id'>;
   inventory: EntityTable<InventoryItem, 'id'>;
+  consumedItems: EntityTable<ConsumedItem, 'id'>;
 };
+
+db.version(4).stores({
+    products: 'id, name, unit',
+    inventory: 'id, productId, expiryDate, unit',
+    consumedItems: 'id, productId, consumedDate'
+});
 
 db.version(3).stores({
     products: 'id, name, unit',
     inventory: 'id, productId, expiryDate, unit',
 }).upgrade(tx => {
-    // This is a destructive migration. Old data will be cleared.
     return Promise.all([
         tx.table('products').clear(),
         tx.table('inventory').clear(),
@@ -38,10 +44,12 @@ db.version(1).stores({
 db.on('ready', () => {
     try {
         const currentVersion = db.verno;
-        const newVersion = db.version(currentVersion + 1).stores({
-            notifications: null // This deletes the table
-        });
-        return newVersion.upgrade(()=>{});
+        if (currentVersion < 4) { // Only run if version is less than what we are defining
+          const newVersion = db.version(currentVersion + 1).stores({
+              notifications: null // This deletes the table
+          });
+          return newVersion.upgrade(()=>{});
+        }
     } catch(e) {
         // Ignore if table doesn't exist
     }

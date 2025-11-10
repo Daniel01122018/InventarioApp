@@ -14,6 +14,15 @@ export type InventoryItem = {
   unit: Unit;
 };
 
+export type ConsumedItem = {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: Unit;
+  consumedDate: Date;
+};
+
 export type ProductWithInventory = Product & {
   inventory: InventoryItem[];
   totalQuantity: number;
