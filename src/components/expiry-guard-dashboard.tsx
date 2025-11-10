@@ -1,63 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useToast } from "@/hooks/use-toast";
-import type { Product, ProductWithInventory, SortConfig, InventoryItem, Notification } from "@/lib/types";
+import type { Product, ProductWithInventory, SortConfig, InventoryItem } from "@/lib/types";
 import { DashboardHeader } from './dashboard-header';
 import { DashboardStats } from './dashboard-stats';
 import { ProductList } from './product-list';
-import { differenceInDays } from 'date-fns';
-
-const updateNotifications = async (items: InventoryItem[], allProducts: Product[]) => {
-  if (!items || !allProducts) return;
-
-  const now = new Date();
-  const productMap = new Map(allProducts.map(p => [p.id, p.name]));
-  const newNotifications: Notification[] = [];
-  
-  const existingNotifications = await db.notifications.toArray();
-  const existingNotificationMap = new Map(existingNotifications.map(n => [n.inventoryItemId, n]));
-  const inventoryItemIdsWithNotif = new Set(existingNotifications.map(n => n.inventoryItemId));
-
-  for (const item of items) {
-    const daysUntilExpiry = differenceInDays(item.expiryDate, now);
-    const productName = productMap.get(item.productId);
-
-    if (!productName) continue;
-    
-    // Only create notifications for items that expire within 7 days and don't have one yet.
-    if (daysUntilExpiry <= 7 && !existingNotificationMap.has(item.id)) {
-      newNotifications.push({
-        id: crypto.randomUUID(),
-        inventoryItemId: item.id,
-        productName,
-        quantity: item.quantity,
-        expiryDate: item.expiryDate,
-        daysUntilExpiry,
-        read: false,
-      });
-    }
-  }
-
-  if (newNotifications.length > 0) {
-    await db.notifications.bulkAdd(newNotifications);
-  }
-  
-  const inventoryItemIds = new Set(items.map(i => i.id));
-  const notificationsToDelete = existingNotifications
-    .filter(notification => {
-        const daysUntilExpiry = differenceInDays(notification.expiryDate, now);
-        return !inventoryItemIds.has(notification.inventoryItemId) || daysUntilExpiry > 7;
-    })
-    .map(n => n.id);
-
-  if (notificationsToDelete.length > 0) {
-    await db.notifications.bulkDelete(notificationsToDelete);
-  }
-};
-
 
 export function ExpiryGuardDashboard() {
   const { toast } = useToast();
@@ -66,18 +16,6 @@ export function ExpiryGuardDashboard() {
 
   const products = useLiveQuery(() => db.products.toArray(), []);
   const inventory = useLiveQuery(() => db.inventory.toArray(), []);
-  const notifications = useLiveQuery(() => db.notifications.orderBy('expiryDate').toArray(), []);
-
-  useEffect(() => {
-    if(inventory && products) {
-        updateNotifications(inventory, products);
-        const interval = setInterval(() => {
-            updateNotifications(inventory, products);
-        }, 1000 * 60 * 60); // Check once an hour
-        return () => clearInterval(interval);
-    }
-  }, [inventory, products]);
-
 
   const addProduct = async (values: { product: { id?: string; name: string; }; quantity: number; expiryDate: Date; }) => {
     try {
@@ -211,35 +149,12 @@ export function ExpiryGuardDashboard() {
     return sortableProducts;
   }, [filteredProducts, sortConfig]);
 
-  const handleNotificationRead = async (id: string) => {
-    try {
-      await db.notifications.update(id, { read: true });
-    } catch (error) {
-      console.error("Failed to mark notification as read: ", error);
-    }
-  };
-  
-  const handleClearNotifications = async () => {
-    try {
-      const readNotifications = await db.notifications.where('read').equals(1).toArray();
-      const idsToDelete = readNotifications.map(n => n.id);
-      if (idsToDelete.length > 0) {
-        await db.notifications.bulkDelete(idsToDelete);
-      }
-    } catch (error) {
-      console.error("Failed to clear read notifications: ", error);
-    }
-  };
-
   return (
     <div className="container mx-auto max-w-7xl">
       <div className="m-2 lg:m-4 border rounded-lg shadow-sm bg-card">
         <DashboardHeader 
           products={products || []}
-          notifications={notifications || []}
           onProductAdd={addProduct}
-          onNotificationRead={handleNotificationRead}
-          onClearNotifications={handleClearNotifications}
         />
         <DashboardStats products={productsWithInventory || []} />
         <ProductList

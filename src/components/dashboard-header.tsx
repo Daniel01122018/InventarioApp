@@ -1,17 +1,13 @@
-import { ShieldCheck, Bell } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { AddProductDialog } from "./add-product-dialog";
-import { NotificationCenter } from './notification-center';
-import type { Product, Notification } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
 interface DashboardHeaderProps {
   products: Product[];
-  notifications: Notification[];
   onProductAdd: (values: { product: { id?: string; name: string; }; quantity: number; expiryDate: Date; }) => void;
-  onNotificationRead: (id: string) => void;
-  onClearNotifications: () => void;
 }
 
-export function DashboardHeader({ products, notifications, onProductAdd, onNotificationRead, onClearNotifications }: DashboardHeaderProps) {
+export function DashboardHeader({ products, onProductAdd }: DashboardHeaderProps) {
   return (
     <header className="flex items-center justify-between border-b p-4 sm:p-6">
       <div className="flex items-center gap-3">
@@ -21,11 +17,6 @@ export function DashboardHeader({ products, notifications, onProductAdd, onNotif
         </h1>
       </div>
       <div className="flex items-center gap-4">
-        <NotificationCenter 
-          notifications={notifications} 
-          onNotificationRead={onNotificationRead}
-          onClearNotifications={onClearNotifications}
-        />
         <AddProductDialog products={products} onProductAdd={onProductAdd} />
       </div>
     </header>

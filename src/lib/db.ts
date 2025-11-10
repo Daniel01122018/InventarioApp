@@ -1,16 +1,14 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Product, InventoryItem, Notification } from './types';
+import type { Product, InventoryItem } from './types';
 
 export const db = new Dexie('TuInventarioDatabase') as Dexie & {
   products: EntityTable<Product, 'id'>;
   inventory: EntityTable<InventoryItem, 'id'>;
-  notifications: EntityTable<Notification, 'id'>;
 };
 
 db.version(2).stores({
   products: 'id, name',
   inventory: 'id, productId, expiryDate',
-  notifications: 'id, inventoryItemId, read'
 }).upgrade(tx => {
     // Migración para la versión 2 para manejar el cambio de estructura.
     // Los datos antiguos no son directamente compatibles con el nuevo esquema de cantidad/lote.
@@ -23,4 +21,13 @@ db.version(2).stores({
 
 db.version(1).stores({
   products: 'id, name, expiryDate',
+});
+
+// Remove notifications table from future versions if it existed
+db.on('ready', () => {
+    const currentVersion = db.verno;
+    const newVersion = db.version(currentVersion + 1).stores({
+        notifications: null // This deletes the table
+    });
+    return newVersion.upgrade(()=>{});
 });

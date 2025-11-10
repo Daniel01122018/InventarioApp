@@ -23,13 +23,3 @@ export type SortConfig = {
   key: SortKey;
   direction: SortDirection;
 };
-
-export type Notification = {
-  id: string;
-  inventoryItemId: string;
-  productName: string;
-  quantity: number;
-  expiryDate: Date;
-  daysUntilExpiry: number;
-  read: boolean;
-};
