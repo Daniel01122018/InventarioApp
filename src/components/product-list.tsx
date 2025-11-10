@@ -123,7 +123,6 @@ export function ProductList({
                   <TableHead>Estado General</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
                 {products.length > 0 ? (
                   products.map((product) => {
                     const nextExpiryItem = product.inventory[0];
@@ -132,7 +131,7 @@ export function ProductList({
                     
                     return (
                      <Collapsible asChild key={product.id} open={isOpen} onOpenChange={() => toggleCollapsible(product.id)}>
-                        <React.Fragment>
+                        <TableBody>
                           <TableRow className="hover:bg-muted/50 cursor-pointer">
                             <TableCell>
                               <CollapsibleTrigger asChild>
@@ -198,18 +197,19 @@ export function ProductList({
                                 </TableCell>
                               </TableRow>
                           </CollapsibleContent>
-                        </React.Fragment>
+                        </TableBody>
                       </Collapsible>
                     );
                   })
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No se encontraron productos.
-                    </TableCell>
-                  </TableRow>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No se encontraron productos.
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
                 )}
-              </TableBody>
             </Table>
           </div>
         </CardContent>
