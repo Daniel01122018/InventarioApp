@@ -131,7 +131,7 @@ export function ProductList({
                     
                     return (
                      <Collapsible asChild key={product.id} open={isOpen} onOpenChange={() => toggleCollapsible(product.id)}>
-                        <>
+                        <tbody key={product.id}>
                           <TableRow className="hover:bg-muted/50 cursor-pointer">
                             <TableCell>
                               <CollapsibleTrigger asChild>
@@ -197,7 +197,7 @@ export function ProductList({
                                 </TableCell>
                               </TableRow>
                           </CollapsibleContent>
-                        </>
+                        </tbody>
                       </Collapsible>
                     );
                   })
