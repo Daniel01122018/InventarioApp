@@ -21,8 +21,9 @@ export function TuInventarioDashboard() {
   
   const notifications = useLiveQuery(async () => {
     const allNotifications = await db.notifications.orderBy('expiryDate').toArray();
+    if (!inventory) return allNotifications;
     // Filter out notifications for items that no longer exist in inventory
-    const inventoryIds = new Set((await db.inventory.toArray()).map(i => i.id));
+    const inventoryIds = new Set(inventory.map(i => i.id));
     const validNotifications = allNotifications.filter(n => inventoryIds.has(n.inventoryItemId));
     // Clean up invalid notifications
     const invalidNotificationIds = allNotifications.filter(n => !inventoryIds.has(n.inventoryItemId)).map(n => n.id);
@@ -127,9 +128,11 @@ export function TuInventarioDashboard() {
         description: `${values.quantity} x ${values.product.name} ha sido añadido a tu inventario.`,
       });
       // Trigger notification check
-      const currentProducts = await db.products.toArray();
-      const currentInventory = await db.inventory.toArray();
-      await updateNotifications(currentInventory, currentProducts);
+      if (products && inventory) {
+        const currentInventory = [...inventory, newInventoryItem];
+        await updateNotifications(currentInventory, products);
+      }
+
 
     } catch (error) {
       console.error("Failed to add product: ", error);
@@ -153,9 +156,10 @@ export function TuInventarioDashboard() {
               description: `El lote de ${product?.name || 'producto'} ha sido eliminado.`,
           });
           // Trigger notification update
-          const currentProducts = await db.products.toArray();
-          const currentInventory = await db.inventory.toArray();
-          await updateNotifications(currentInventory, currentProducts);
+           if (products && inventory) {
+             const currentInventory = inventory.filter(i => i.id !== inventoryItemId);
+             await updateNotifications(currentInventory, products);
+           }
         }
     } catch (error) {
         console.error("Failed to delete inventory item: ", error);
