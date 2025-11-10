@@ -19,7 +19,7 @@ export function DashboardHeader({ products, productsWithInventory, onProductAdd,
           Tu Inventario
         </h1>
       </div>
-      <div className="flex w-full sm:w-auto items-center gap-4">
+      <div className="grid grid-cols-2 sm:flex w-full sm:w-auto items-center gap-2">
         <ConsumeProductDialog 
           productsWithInventory={productsWithInventory}
           onConsume={onConsumeProduct}
