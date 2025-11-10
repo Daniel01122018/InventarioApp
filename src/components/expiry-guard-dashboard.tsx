@@ -18,6 +18,7 @@ export function ExpiryGuardDashboard() {
 
   const products = useLiveQuery(() => db.products.toArray(), []);
   const inventory = useLiveQuery(() => db.inventory.toArray(), []);
+  const consumedItems = useLiveQuery(() => db.consumedItems.toArray(), []);
 
   const addProduct = async (values: { product: { id?: string; name: string; unit: Unit; }; quantity: number; expiryDate: Date; }) => {
     try {
@@ -230,7 +231,7 @@ export function ExpiryGuardDashboard() {
         />
         <Tabs defaultValue="inventory" className="w-full">
             <div className='flex justify-start border-b px-4 sm:px-6'>
-                <TabsList>
+                <TabsList className="flex-wrap h-auto">
                     <TabsTrigger value="inventory">Inventario</TabsTrigger>
                     <TabsTrigger value="expiring-soon">Próximos a Caducar</TabsTrigger>
                     <TabsTrigger value="reports">Reportes</TabsTrigger>
@@ -258,7 +259,7 @@ export function ExpiryGuardDashboard() {
                 />
             </TabsContent>
             <TabsContent value="reports">
-                <ReportsDashboard products={productsWithInventory} />
+                <ReportsDashboard products={productsWithInventory} consumedItems={consumedItems || []} />
             </TabsContent>
         </Tabs>
       </div>

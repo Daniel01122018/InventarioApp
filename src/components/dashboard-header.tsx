@@ -12,14 +12,14 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ products, productsWithInventory, onProductAdd, onConsumeProduct }: DashboardHeaderProps) {
   return (
-    <header className="flex items-center justify-between border-b p-4 sm:p-6">
-      <div className="flex items-center gap-3">
+    <header className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b p-4 sm:p-6">
+      <div className="flex items-center gap-3 self-start">
         <ShieldCheck className="h-8 w-8 text-primary" />
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl font-headline">
           Tu Inventario
         </h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex w-full sm:w-auto items-center gap-4">
         <ConsumeProductDialog 
           productsWithInventory={productsWithInventory}
           onConsume={onConsumeProduct}

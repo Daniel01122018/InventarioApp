@@ -1,20 +1,22 @@
 "use client";
 
 import { useMemo } from "react";
-import type { ProductWithInventory } from "@/lib/types";
+import type { ProductWithInventory, ConsumedItem } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, BellRing, AlertTriangle, PackagePlus, PackageMinus, TrendingUp } from "lucide-react";
-import { differenceInDays, startOfMonth, isWithinInterval } from "date-fns";
+import { Package, BellRing, AlertTriangle, PackagePlus, PackageMinus, TrendingUp, Zap } from "lucide-react";
+import { differenceInDays, startOfMonth, isWithinInterval, subMonths } from "date-fns";
 
 interface ReportsDashboardProps {
     products: ProductWithInventory[];
+    consumedItems: ConsumedItem[];
 }
 
-export function ReportsDashboard({ products }: ReportsDashboardProps) {
+export function ReportsDashboard({ products, consumedItems }: ReportsDashboardProps) {
 
     const stats = useMemo(() => {
         const now = new Date();
         const startOfThisMonth = startOfMonth(now);
+        const startOfLastMonth = startOfMonth(subMonths(now, 1));
         
         let expiringSoonCount = 0;
         let expiredCount = 0;
@@ -22,6 +24,28 @@ export function ReportsDashboard({ products }: ReportsDashboardProps) {
         let expiredThisMonthCount = 0;
         let productWithMostStock: ProductWithInventory | null = null;
         let productWithLeastStock: ProductWithInventory | null = null;
+        
+        const consumedLast30Days = new Map<string, number>();
+        consumedItems.forEach(item => {
+             if (differenceInDays(now, item.consumedDate) <= 30) {
+                 const currentQty = consumedLast30Days.get(item.productId) || 0;
+                 consumedLast30Days.set(item.productId, currentQty + item.quantity);
+             }
+        });
+
+        let mostRotatedProduct: { name: string, quantity: number, unit: string } | null = null;
+        if(consumedLast30Days.size > 0){
+            const mostRotatedProductId = [...consumedLast30Days.entries()].sort((a, b) => b[1] - a[1])[0][0];
+            const productInfo = products.find(p => p.id === mostRotatedProductId);
+            if(productInfo) {
+                mostRotatedProduct = {
+                    name: productInfo.name,
+                    quantity: consumedLast30Days.get(mostRotatedProductId)!,
+                    unit: productInfo.unit
+                }
+            }
+        }
+
 
         if (!products || products.length === 0) {
             return {
@@ -31,6 +55,7 @@ export function ReportsDashboard({ products }: ReportsDashboardProps) {
                 expiredThisMonthCount,
                 productWithMostStock: null,
                 productWithLeastStock: null,
+                mostRotatedProduct: null,
             };
         }
 
@@ -64,9 +89,10 @@ export function ReportsDashboard({ products }: ReportsDashboardProps) {
             expiredCount,
             expiredThisMonthCount,
             productWithMostStock,
-            productWithLeastStock
+            productWithLeastStock,
+            mostRotatedProduct
         };
-    }, [products]);
+    }, [products, consumedItems]);
 
 
     return (
@@ -100,6 +126,18 @@ export function ReportsDashboard({ products }: ReportsDashboardProps) {
                     <CardContent>
                         <div className="text-2xl font-bold text-destructive">{stats.expiredCount.toLocaleString()}</div>
                         <p className="text-xs text-muted-foreground">han pasado su fecha de caducidad</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Mayor Rotación (30 días)</CardTitle>
+                        <Zap className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-xl font-bold">{stats.mostRotatedProduct?.name || 'N/A'}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.mostRotatedProduct ? `${stats.mostRotatedProduct.quantity.toLocaleString()} ${stats.mostRotatedProduct.unit} consumidos` : 'No hay datos de consumo'}
+                        </p>
                     </CardContent>
                 </Card>
                 <Card>
