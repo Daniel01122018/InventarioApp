@@ -6,8 +6,10 @@ import { db } from '@/lib/db';
 import { useToast } from "@/hooks/use-toast";
 import type { Product, ProductWithInventory, SortConfig, InventoryItem, Unit } from "@/lib/types";
 import { DashboardHeader } from './dashboard-header';
-import { DashboardStats } from './dashboard-stats';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProductList } from './product-list';
+import { ReportsDashboard } from './reports-dashboard';
+import { differenceInDays } from 'date-fns';
 
 export function ExpiryGuardDashboard() {
   const { toast } = useToast();
@@ -105,51 +107,67 @@ export function ExpiryGuardDashboard() {
   }, [products, inventory]);
 
 
-  const filteredProducts = useMemo(() => {
-    if (!productsWithInventory) return [];
-    return productsWithInventory.filter(product =>
+  const filteredAndSortedProducts = useMemo(() => {
+    const filtered = productsWithInventory.filter(product =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [productsWithInventory, searchTerm]);
 
-  const sortedProducts = useMemo(() => {
-    if (!filteredProducts) return [];
-    const sortableProducts = [...filteredProducts];
-    if (sortConfig !== null) {
-      sortableProducts.sort((a, b) => {
-        let aValue: string | number;
-        let bValue: string | number;
+    const sorted = [...filtered].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
 
-        switch(sortConfig.key) {
-          case 'name':
-            aValue = a.name.toLowerCase();
-            bValue = b.name.toLowerCase();
-            break;
-          case 'totalQuantity':
-            aValue = a.totalQuantity;
-            bValue = b.totalQuantity;
-            break;
-          case 'nextExpiryDate':
-            const aNextExpiry = a.inventory[0]?.expiryDate.getTime() ?? Infinity;
-            const bNextExpiry = b.inventory[0]?.expiryDate.getTime() ?? Infinity;
-            aValue = aNextExpiry;
-            bValue = bNextExpiry;
-            break;
-          default:
-            return 0;
-        }
+      switch(sortConfig.key) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'totalQuantity':
+          aValue = a.totalQuantity;
+          bValue = b.totalQuantity;
+          break;
+        case 'nextExpiryDate':
+          const aNextExpiry = a.inventory[0]?.expiryDate.getTime() ?? Infinity;
+          const bNextExpiry = b.inventory[0]?.expiryDate.getTime() ?? Infinity;
+          aValue = aNextExpiry;
+          bValue = bNextExpiry;
+          break;
+        default:
+          return 0;
+      }
 
-        if (aValue < bValue) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableProducts;
-  }, [filteredProducts, sortConfig]);
+      if (aValue < bValue) {
+        return sortConfig.direction === 'ascending' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
+    
+    return sorted;
+  }, [productsWithInventory, searchTerm, sortConfig]);
+
+  const expiringSoonProducts = useMemo(() => {
+    return productsWithInventory
+        .map(product => {
+            const expiringInventory = product.inventory.filter(item => {
+                const daysUntilExpiry = differenceInDays(item.expiryDate, new Date());
+                return daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
+            });
+
+            if (expiringInventory.length === 0) {
+                return null;
+            }
+
+            return {
+                ...product,
+                inventory: expiringInventory,
+                totalQuantity: expiringInventory.reduce((sum, item) => sum + item.quantity, 0),
+            };
+        })
+        .filter((p): p is ProductWithInventory => p !== null);
+}, [productsWithInventory]);
+
 
   return (
     <div className="container mx-auto max-w-7xl">
@@ -158,15 +176,39 @@ export function ExpiryGuardDashboard() {
           products={products || []}
           onProductAdd={addProduct}
         />
-        <DashboardStats products={productsWithInventory || []} />
-        <ProductList
-          products={sortedProducts}
-          onDeleteInventoryItem={deleteInventoryItem}
-          searchTerm={searchTerm}
-          onSearchTermChange={setSearchTerm}
-          sortConfig={sortConfig}
-          onSortConfigChange={setSortConfig}
-        />
+        <Tabs defaultValue="inventory" className="w-full">
+            <div className='flex justify-center border-b'>
+                <TabsList>
+                    <TabsTrigger value="inventory">Inventario</TabsTrigger>
+                    <TabsTrigger value="expiring-soon">Próximos a Caducar</TabsTrigger>
+                    <TabsTrigger value="reports">Reportes</TabsTrigger>
+                </TabsList>
+            </div>
+            <TabsContent value="inventory">
+                <ProductList
+                    products={filteredAndSortedProducts}
+                    onDeleteInventoryItem={deleteInventoryItem}
+                    searchTerm={searchTerm}
+                    onSearchTermChange={setSearchTerm}
+                    sortConfig={sortConfig}
+                    onSortConfigChange={setSortConfig}
+                />
+            </TabsContent>
+            <TabsContent value="expiring-soon">
+                <ProductList
+                    products={expiringSoonProducts}
+                    onDeleteInventoryItem={deleteInventoryItem}
+                    searchTerm={""}
+                    onSearchTermChange={()=>{}}
+                    sortConfig={{ key: 'nextExpiryDate', direction: 'ascending' }}
+                    onSortConfigChange={()=>{}}
+                    isMinimalView={true}
+                />
+            </TabsContent>
+            <TabsContent value="reports">
+                <ReportsDashboard products={productsWithInventory} />
+            </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

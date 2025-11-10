@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "./ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
 
 type SortableKeys = 'name' | 'totalQuantity' | 'nextExpiryDate';
 
@@ -39,6 +38,7 @@ interface ProductListProps {
   onSearchTermChange: (term: string) => void;
   sortConfig: SortConfig;
   onSortConfigChange: (config: SortConfig) => void;
+  isMinimalView?: boolean;
 }
 
 export function ProductList({
@@ -48,6 +48,7 @@ export function ProductList({
   onSearchTermChange,
   sortConfig,
   onSortConfigChange,
+  isMinimalView = false
 }: ProductListProps) {
   const [itemToDelete, setItemToDelete] = useState<InventoryItem & { productName: string } | null>(null);
   const [openCollapsibles, setOpenCollapsibles] = useState<Record<string, boolean>>({});
@@ -61,7 +62,7 @@ export function ProductList({
   };
 
   const getSortIndicator = (key: SortableKeys) => {
-    if (!sortConfig || sortConfig.key !== key) {
+    if (isMinimalView || !sortConfig || sortConfig.key !== key) {
       return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
     }
     return sortConfig.direction === 'ascending' ? '▲' : '▼';
@@ -82,36 +83,38 @@ export function ProductList({
     <div className="p-4 sm:p-6 space-y-4">
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => onSearchTermChange(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+            {!isMinimalView && (
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div className="relative w-full sm:max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Buscar productos..."
+                        value={searchTerm}
+                        onChange={(e) => onSearchTermChange(e.target.value)}
+                        className="pl-10"
+                    />
+                    </div>
+                </div>
+            )}
           <div className="mt-4 rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
                   <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('name')}>
+                    <Button variant="ghost" onClick={() => requestSort('name')} disabled={isMinimalView}>
                       Producto
                       {getSortIndicator('name')}
                     </Button>
                   </TableHead>
                   <TableHead>
-                     <Button variant="ghost" onClick={() => requestSort('totalQuantity')}>
+                     <Button variant="ghost" onClick={() => requestSort('totalQuantity')} disabled={isMinimalView}>
                       Cantidad Total
                       {getSortIndicator('totalQuantity')}
                     </Button>
                   </TableHead>
                   <TableHead className="hidden md:table-cell">
-                    <Button variant="ghost" onClick={() => requestSort('nextExpiryDate')}>
+                    <Button variant="ghost" onClick={() => requestSort('nextExpiryDate')} disabled={isMinimalView}>
                       Próxima Caducidad
                       {getSortIndicator('nextExpiryDate')}
                     </Button>
