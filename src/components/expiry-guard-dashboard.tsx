@@ -1,22 +1,85 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useToast } from "@/hooks/use-toast";
-import type { Product, ProductWithInventory, SortConfig, InventoryItem } from "@/lib/types";
+import type { Product, ProductWithInventory, SortConfig, InventoryItem, Notification } from "@/lib/types";
 import { DashboardHeader } from './dashboard-header';
 import { DashboardStats } from './dashboard-stats';
 import { ProductList } from './product-list';
+import { differenceInDays } from 'date-fns';
 
-export function TuInventarioDashboard() {
+const updateNotifications = async (items: InventoryItem[], allProducts: Product[]) => {
+  if (!items || !allProducts) return;
+
+  const now = new Date();
+  const productMap = new Map(allProducts.map(p => [p.id, p.name]));
+  const newNotifications: Notification[] = [];
+  const updatedNotifications: {key: string, changes: Partial<Notification>}[] = [];
+  
+  const existingNotifications = await db.notifications.toArray();
+  const notificationMap = new Map(existingNotifications.map(n => [n.inventoryItemId, n]));
+
+  for (const item of items) {
+    const daysUntilExpiry = differenceInDays(item.expiryDate, now);
+    const productName = productMap.get(item.productId);
+
+    if (!productName) continue;
+
+    const existingNotification = notificationMap.get(item.id);
+
+    if (daysUntilExpiry <= 7) {
+      if (!existingNotification) {
+        newNotifications.push({
+          id: crypto.randomUUID(),
+          inventoryItemId: item.id,
+          productName,
+          quantity: item.quantity,
+          expiryDate: item.expiryDate,
+          daysUntilExpiry,
+          read: false,
+        });
+      } else if (existingNotification.daysUntilExpiry !== daysUntilExpiry || existingNotification.quantity !== item.quantity) {
+         updatedNotifications.push({key: existingNotification.id, changes: { daysUntilExpiry, quantity: item.quantity }});
+      }
+    }
+  }
+
+  const notificationsToDelete: string[] = [];
+  const inventoryItemIds = new Set(items.map(i => i.id));
+  for (const notification of existingNotifications) {
+      const daysUntilExpiry = differenceInDays(notification.expiryDate, now);
+      if (!inventoryItemIds.has(notification.inventoryItemId) || daysUntilExpiry > 7) {
+        notificationsToDelete.push(notification.id);
+      }
+  }
+
+  if (newNotifications.length > 0) await db.notifications.bulkAdd(newNotifications);
+  if (updatedNotifications.length > 0) await db.notifications.bulkUpdate(updatedNotifications);
+  if (notificationsToDelete.length > 0) await db.notifications.bulkDelete(notificationsToDelete);
+};
+
+
+export function ExpiryGuardDashboard() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nextExpiryDate', direction: 'ascending' });
 
   const products = useLiveQuery(() => db.products.toArray(), []);
   const inventory = useLiveQuery(() => db.inventory.toArray(), []);
-  const notifications = useLiveQuery(() => db.notifications.toArray(), []);
+  const notifications = useLiveQuery(() => db.notifications.orderBy('expiryDate').toArray(), []);
+
+  useEffect(() => {
+    if(inventory && products) {
+      const interval = setInterval(() => {
+        updateNotifications(inventory, products);
+      }, 1000 * 60 * 60); // Check once an hour
+      updateNotifications(inventory, products); // Initial check
+      return () => clearInterval(interval);
+    }
+  }, [inventory, products]);
+
 
   const addProduct = async (values: { product: { id?: string; name: string; }; quantity: number; expiryDate: Date; }) => {
     try {
@@ -47,6 +110,7 @@ export function TuInventarioDashboard() {
         title: "Producto Añadido",
         description: `${values.quantity} x ${values.product.name} ha sido añadido a tu inventario.`,
       });
+      
     } catch (error) {
       console.error("Failed to add product: ", error);
       toast({
@@ -63,6 +127,7 @@ export function TuInventarioDashboard() {
         if(item) {
           const product = await db.products.get(item.productId);
           await db.inventory.delete(inventoryItemId);
+          
           toast({
               title: "Lote Eliminado",
               description: `El lote de ${product?.name || 'producto'} ha sido eliminado.`,
@@ -158,8 +223,7 @@ export function TuInventarioDashboard() {
   
   const handleClearNotifications = async () => {
     try {
-      const readNotifications = await db.notifications.where('read').equals(1).toArray();
-      await db.notifications.bulkDelete(readNotifications.map(n => n.id));
+      await db.notifications.where('read').equals(1).delete();
     } catch (error) {
       console.error("Failed to clear read notifications: ", error);
     }
