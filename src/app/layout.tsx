@@ -8,7 +8,7 @@ import { setDefaultOptions } from 'date-fns';
 setDefaultOptions({ locale: es });
 
 export const metadata: Metadata = {
-  title: 'ExpiryGuard',
+  title: 'Tu Inventario',
   description: 'Gestiona las fechas de caducidad de tus productos con facilidad.',
 };
 

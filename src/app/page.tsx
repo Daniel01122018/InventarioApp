@@ -1,9 +1,9 @@
-import { ExpiryGuardDashboard } from '@/components/expiry-guard-dashboard';
+import { TuInventarioDashboard } from '@/components/tu-inventario-dashboard';
 
 export default function Home() {
   return (
     <main>
-      <ExpiryGuardDashboard />
+      <TuInventarioDashboard />
     </main>
   );
 }

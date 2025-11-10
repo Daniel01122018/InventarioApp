@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { Product } from './types';
 
-export const db = new Dexie('ExpiryGuardDatabase') as Dexie & {
+export const db = new Dexie('TuInventarioDatabase') as Dexie & {
   products: EntityTable<Product, 'id'>;
 };
 
