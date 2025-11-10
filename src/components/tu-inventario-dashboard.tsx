@@ -39,7 +39,6 @@ export function TuInventarioDashboard() {
         const product = await db.products.get(productId);
         await db.products.delete(productId);
         toast({
-            variant: "destructive",
             title: "Producto Eliminado",
             description: `${product?.name || 'El producto'} ha sido eliminado.`,
         });
@@ -61,6 +60,7 @@ export function TuInventarioDashboard() {
   }, [products, searchTerm]);
 
   const sortedProducts = useMemo(() => {
+    if (!filteredProducts) return [];
     const sortableProducts = [...filteredProducts];
     if (sortConfig !== null) {
       sortableProducts.sort((a, b) => {
