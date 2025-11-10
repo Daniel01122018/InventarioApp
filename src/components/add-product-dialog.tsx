@@ -41,15 +41,26 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from "@/lib/utils";
-import type { Product } from "@/lib/types";
+import type { Product, Unit } from "@/lib/types";
+
+const units: { value: Unit, label: string }[] = [
+    { value: 'unidades', label: 'Unidades' },
+    { value: 'kg', label: 'Kilogramos (kg)' },
+    { value: 'g', label: 'Gramos (g)' },
+    { value: 'lb', label: 'Libras (lb)' },
+    { value: 'litros', label: 'Litros (l)' },
+    { value: 'ml', label: 'Mililitros (ml)' },
+];
 
 const productFormSchema = z.object({
   product: z.object({
     id: z.string().optional(),
     name: z.string().min(2, "El nombre del producto debe tener al menos 2 caracteres."),
+    unit: z.enum(['unidades', 'kg', 'g', 'lb', 'litros', 'ml']),
   }),
-  quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1."),
+  quantity: z.coerce.number().min(0.01, "La cantidad debe ser mayor que 0."),
   expiryDate: z.date({
     required_error: "Se requiere una fecha de caducidad.",
   }),
@@ -69,14 +80,16 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      product: { name: "" },
+      product: { name: "", unit: 'unidades' },
       quantity: 1,
     },
   });
 
+  const selectedProduct = form.watch('product');
+
   function onSubmit(data: ProductFormValues) {
     onProductAdd(data);
-    form.reset({ product: { name: "" }, quantity: 1, expiryDate: undefined });
+    form.reset({ product: { name: "", unit: 'unidades' }, quantity: 1, expiryDate: undefined });
     setOpen(false);
   }
 
@@ -128,7 +141,8 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
                         <Command>
                           <CommandInput placeholder="Buscar producto..." 
                             onValueChange={(search) => {
-                                field.onChange({ name: search });
+                                // Keep the unit if a product was already selected
+                                field.onChange({ ...field.value, name: search });
                             }}
                           />
                           <CommandList>
@@ -163,19 +177,47 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
                   </FormItem>
                 )}
               />
-               <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cantidad</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="p. ej., 10" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+               <div className="flex gap-4">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem className='flex-1'>
+                      <FormLabel>Cantidad</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="p. ej., 1.5" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                    control={form.control}
+                    name="product.unit"
+                    render={({ field }) => (
+                        <FormItem className='w-1/3'>
+                        <FormLabel>Unidad</FormLabel>
+                        <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            disabled={!!selectedProduct?.id}
+                        >
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Unidad" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {units.map(u => (
+                                <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="expiryDate"

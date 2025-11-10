@@ -4,7 +4,7 @@ import type { Product } from "@/lib/types";
 
 interface DashboardHeaderProps {
   products: Product[];
-  onProductAdd: (values: { product: { id?: string; name: string; }; quantity: number; expiryDate: Date; }) => void;
+  onProductAdd: (values: { product: { id?: string; name: string; unit: 'unidades' | 'kg' | 'g' | 'lb' | 'litros' | 'ml'; }; quantity: number; expiryDate: Date; }) => void;
 }
 
 export function DashboardHeader({ products, onProductAdd }: DashboardHeaderProps) {

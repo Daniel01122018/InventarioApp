@@ -6,6 +6,17 @@ export const db = new Dexie('TuInventarioDatabase') as Dexie & {
   inventory: EntityTable<InventoryItem, 'id'>;
 };
 
+db.version(3).stores({
+    products: 'id, name, unit',
+    inventory: 'id, productId, expiryDate, unit',
+}).upgrade(tx => {
+    // This is a destructive migration. Old data will be cleared.
+    return Promise.all([
+        tx.table('products').clear(),
+        tx.table('inventory').clear(),
+    ]);
+});
+
 db.version(2).stores({
   products: 'id, name',
   inventory: 'id, productId, expiryDate',
@@ -25,9 +36,13 @@ db.version(1).stores({
 
 // Remove notifications table from future versions if it existed
 db.on('ready', () => {
-    const currentVersion = db.verno;
-    const newVersion = db.version(currentVersion + 1).stores({
-        notifications: null // This deletes the table
-    });
-    return newVersion.upgrade(()=>{});
+    try {
+        const currentVersion = db.verno;
+        const newVersion = db.version(currentVersion + 1).stores({
+            notifications: null // This deletes the table
+        });
+        return newVersion.upgrade(()=>{});
+    } catch(e) {
+        // Ignore if table doesn't exist
+    }
 });

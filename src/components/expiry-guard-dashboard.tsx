@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useToast } from "@/hooks/use-toast";
-import type { Product, ProductWithInventory, SortConfig, InventoryItem } from "@/lib/types";
+import type { Product, ProductWithInventory, SortConfig, InventoryItem, Unit } from "@/lib/types";
 import { DashboardHeader } from './dashboard-header';
 import { DashboardStats } from './dashboard-stats';
 import { ProductList } from './product-list';
@@ -17,7 +17,7 @@ export function ExpiryGuardDashboard() {
   const products = useLiveQuery(() => db.products.toArray(), []);
   const inventory = useLiveQuery(() => db.inventory.toArray(), []);
 
-  const addProduct = async (values: { product: { id?: string; name: string; }; quantity: number; expiryDate: Date; }) => {
+  const addProduct = async (values: { product: { id?: string; name: string; unit: Unit; }; quantity: number; expiryDate: Date; }) => {
     try {
       let productId = values.product.id;
       if (!productId) {
@@ -25,26 +25,28 @@ export function ExpiryGuardDashboard() {
         if (existingProduct) {
           productId = existingProduct.id;
         } else {
-          const newProduct = { name: values.product.name, id: crypto.randomUUID() };
+          const newProduct: Product = { name: values.product.name, id: crypto.randomUUID(), unit: values.product.unit };
           const newProductId = await db.products.add(newProduct);
           productId = newProductId as string;
         }
       }
+      
+      const productInfo = await db.products.get(productId);
+      if (!productInfo) throw new Error("No se pudo crear o encontrar el producto.");
 
-      if (!productId) throw new Error("No se pudo crear o encontrar el producto.");
-
-      const newInventoryItem = {
+      const newInventoryItem: InventoryItem = {
         id: crypto.randomUUID(),
         productId: productId,
         quantity: values.quantity,
-        expiryDate: values.expiryDate
+        expiryDate: values.expiryDate,
+        unit: productInfo.unit,
       };
 
       await db.inventory.add(newInventoryItem);
       
       toast({
         title: "Producto Añadido",
-        description: `${values.quantity} x ${values.product.name} ha sido añadido a tu inventario.`,
+        description: `${values.quantity} ${productInfo.unit} de ${values.product.name} ha sido añadido a tu inventario.`,
       });
       
     } catch (error) {

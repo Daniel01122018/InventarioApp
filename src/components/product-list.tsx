@@ -139,7 +139,7 @@ export function ProductList({
                               </CollapsibleTrigger>
                             </TableCell>
                             <TableCell className="font-medium" onClick={() => toggleCollapsible(product.id)}>{product.name}</TableCell>
-                            <TableCell onClick={() => toggleCollapsible(product.id)}>{product.totalQuantity}</TableCell>
+                            <TableCell onClick={() => toggleCollapsible(product.id)}>{product.totalQuantity.toLocaleString()} {product.unit}</TableCell>
                             <TableCell className="hidden md:table-cell" onClick={() => toggleCollapsible(product.id)}>
                               {nextExpiryItem ? format(nextExpiryItem.expiryDate, "MMM d, yyyy", { locale: es }) : '-'}
                             </TableCell>
@@ -169,7 +169,7 @@ export function ProductList({
                                           const status = getStatus(item.expiryDate);
                                           return (
                                             <TableRow key={item.id}>
-                                              <TableCell>{item.quantity}</TableCell>
+                                              <TableCell>{item.quantity.toLocaleString()} {item.unit}</TableCell>
                                               <TableCell>{format(item.expiryDate, "MMM d, yyyy", { locale: es })}</TableCell>
                                               <TableCell>
                                                 {formatDistanceToNowStrict(item.expiryDate, { addSuffix: true, locale: es })}
@@ -216,7 +216,7 @@ export function ProductList({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro de que quieres eliminar este lote?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esto eliminará permanentemente el lote de {itemToDelete?.quantity} x "{itemToDelete?.productName}" que caduca el {itemToDelete && format(itemToDelete.expiryDate, "PPP", { locale: es })}. Esta acción no se puede deshacer.
+              Esto eliminará permanentemente el lote de {itemToDelete?.quantity.toLocaleString()} {itemToDelete?.unit} de "{itemToDelete?.productName}" que caduca el {itemToDelete && format(itemToDelete.expiryDate, "PPP", { locale: es })}. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

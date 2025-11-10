@@ -1,6 +1,9 @@
+export type Unit = 'unidades' | 'kg' | 'g' | 'lb' | 'litros' | 'ml';
+
 export type Product = {
   id: string;
   name: string;
+  unit: Unit;
 };
 
 export type InventoryItem = {
@@ -8,6 +11,7 @@ export type InventoryItem = {
   productId: string;
   quantity: number;
   expiryDate: Date;
+  unit: Unit;
 };
 
 export type ProductWithInventory = Product & {
