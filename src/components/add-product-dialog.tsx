@@ -92,6 +92,8 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
     form.reset({ product: { name: "", unit: 'unidades' }, quantity: 1, expiryDate: undefined });
     setOpen(false);
   }
+  
+  const currentProductValue = form.watch('product.name');
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -129,9 +131,7 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
                             )}
                           >
                             {field.value.name
-                              ? products.find(
-                                  (p) => p.name.toLowerCase() === field.value.name.toLowerCase()
-                                )?.name ?? field.value.name
+                              ? field.value.name
                               : "Selecciona o crea un producto"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -139,14 +139,26 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
                       </PopoverTrigger>
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                         <Command>
-                          <CommandInput placeholder="Buscar producto..." 
+                           <CommandInput 
+                            placeholder="Buscar o crear producto..."
+                            value={currentProductValue}
                             onValueChange={(search) => {
                                 // Keep the unit if a product was already selected
-                                field.onChange({ ...field.value, name: search });
+                                const existingProduct = products.find(p => p.name.toLowerCase() === search.toLowerCase());
+                                if (!existingProduct) {
+                                    field.onChange({ name: search, unit: field.value.unit });
+                                }
                             }}
                           />
                           <CommandList>
-                            <CommandEmpty>No se encontró el producto. Se creará uno nuevo.</CommandEmpty>
+                            <CommandEmpty>
+                                <div className='p-2 text-sm'>
+                                    No se encontró el producto.
+                                    {currentProductValue.length > 0 && 
+                                        <p>Se creará uno nuevo llamado: <span className='font-bold'>{currentProductValue}</span></p>
+                                    }
+                                </div>
+                            </CommandEmpty>
                             <CommandGroup>
                               {products.map((product) => (
                                 <CommandItem
