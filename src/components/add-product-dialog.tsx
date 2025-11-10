@@ -154,7 +154,7 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
                             <CommandEmpty>
                                 <div className='p-2 text-sm'>
                                     No se encontró el producto.
-                                    {currentProductValue.length > 0 && 
+                                    {currentProductValue && currentProductValue.length > 0 && 
                                         <p>Se creará uno nuevo llamado: <span className='font-bold'>{currentProductValue}</span></p>
                                     }
                                 </div>
