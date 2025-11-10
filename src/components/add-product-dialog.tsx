@@ -76,6 +76,7 @@ interface AddProductDialogProps {
 export function AddProductDialog({ products, onProductAdd }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -236,7 +237,7 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Fecha de Caducidad</FormLabel>
-                    <Popover>
+                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -259,7 +260,10 @@ export function AddProductDialog({ products, onProductAdd }: AddProductDialogPro
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setCalendarOpen(false);
+                          }}
                           disabled={(date) => date < new Date("1900-01-01")}
                           initialFocus
                           locale={es}
