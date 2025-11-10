@@ -16,48 +16,46 @@ const updateNotifications = async (items: InventoryItem[], allProducts: Product[
   const now = new Date();
   const productMap = new Map(allProducts.map(p => [p.id, p.name]));
   const newNotifications: Notification[] = [];
-  const updatedNotifications: {key: string, changes: Partial<Notification>}[] = [];
   
   const existingNotifications = await db.notifications.toArray();
-  const notificationMap = new Map(existingNotifications.map(n => [n.inventoryItemId, n]));
+  const existingNotificationMap = new Map(existingNotifications.map(n => [n.inventoryItemId, n]));
+  const inventoryItemIdsWithNotif = new Set(existingNotifications.map(n => n.inventoryItemId));
 
   for (const item of items) {
     const daysUntilExpiry = differenceInDays(item.expiryDate, now);
     const productName = productMap.get(item.productId);
 
     if (!productName) continue;
-
-    const existingNotification = notificationMap.get(item.id);
-
-    if (daysUntilExpiry <= 7) {
-      if (!existingNotification) {
-        newNotifications.push({
-          id: crypto.randomUUID(),
-          inventoryItemId: item.id,
-          productName,
-          quantity: item.quantity,
-          expiryDate: item.expiryDate,
-          daysUntilExpiry,
-          read: false,
-        });
-      } else if (existingNotification.daysUntilExpiry !== daysUntilExpiry || existingNotification.quantity !== item.quantity) {
-         updatedNotifications.push({key: existingNotification.id, changes: { daysUntilExpiry, quantity: item.quantity }});
-      }
+    
+    // Only create notifications for items that expire within 7 days and don't have one yet.
+    if (daysUntilExpiry <= 7 && !existingNotificationMap.has(item.id)) {
+      newNotifications.push({
+        id: crypto.randomUUID(),
+        inventoryItemId: item.id,
+        productName,
+        quantity: item.quantity,
+        expiryDate: item.expiryDate,
+        daysUntilExpiry,
+        read: false,
+      });
     }
   }
 
-  const notificationsToDelete: string[] = [];
-  const inventoryItemIds = new Set(items.map(i => i.id));
-  for (const notification of existingNotifications) {
-      const daysUntilExpiry = differenceInDays(notification.expiryDate, now);
-      if (!inventoryItemIds.has(notification.inventoryItemId) || daysUntilExpiry > 7) {
-        notificationsToDelete.push(notification.id);
-      }
+  if (newNotifications.length > 0) {
+    await db.notifications.bulkAdd(newNotifications);
   }
+  
+  const inventoryItemIds = new Set(items.map(i => i.id));
+  const notificationsToDelete = existingNotifications
+    .filter(notification => {
+        const daysUntilExpiry = differenceInDays(notification.expiryDate, now);
+        return !inventoryItemIds.has(notification.inventoryItemId) || daysUntilExpiry > 7;
+    })
+    .map(n => n.id);
 
-  if (newNotifications.length > 0) await db.notifications.bulkAdd(newNotifications);
-  if (updatedNotifications.length > 0) await db.notifications.bulkUpdate(updatedNotifications);
-  if (notificationsToDelete.length > 0) await db.notifications.bulkDelete(notificationsToDelete);
+  if (notificationsToDelete.length > 0) {
+    await db.notifications.bulkDelete(notificationsToDelete);
+  }
 };
 
 
@@ -72,11 +70,11 @@ export function ExpiryGuardDashboard() {
 
   useEffect(() => {
     if(inventory && products) {
-      const interval = setInterval(() => {
         updateNotifications(inventory, products);
-      }, 1000 * 60 * 60); // Check once an hour
-      updateNotifications(inventory, products); // Initial check
-      return () => clearInterval(interval);
+        const interval = setInterval(() => {
+            updateNotifications(inventory, products);
+        }, 1000 * 60 * 60); // Check once an hour
+        return () => clearInterval(interval);
     }
   }, [inventory, products]);
 
@@ -223,7 +221,11 @@ export function ExpiryGuardDashboard() {
   
   const handleClearNotifications = async () => {
     try {
-      await db.notifications.where('read').equals(1).delete();
+      const readNotifications = await db.notifications.where('read').equals(1).toArray();
+      const idsToDelete = readNotifications.map(n => n.id);
+      if (idsToDelete.length > 0) {
+        await db.notifications.bulkDelete(idsToDelete);
+      }
     } catch (error) {
       console.error("Failed to clear read notifications: ", error);
     }
