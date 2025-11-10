@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -17,13 +18,32 @@ export function TuInventarioDashboard() {
 
   const products = useLiveQuery(() => db.products.toArray(), []);
   const inventory = useLiveQuery(() => db.inventory.toArray(), []);
-  const notifications = useLiveQuery(() => db.notifications.where('read').equals(0).toArray(), []);
+  
+  const notifications = useLiveQuery(async () => {
+    const allNotifications = await db.notifications.orderBy('expiryDate').toArray();
+    // Filter out notifications for items that no longer exist in inventory
+    const inventoryIds = new Set((await db.inventory.toArray()).map(i => i.id));
+    const validNotifications = allNotifications.filter(n => inventoryIds.has(n.inventoryItemId));
+    // Clean up invalid notifications
+    const invalidNotificationIds = allNotifications.filter(n => !inventoryIds.has(n.inventoryItemId)).map(n => n.id);
+    if (invalidNotificationIds.length > 0) {
+      db.notifications.bulkDelete(invalidNotificationIds);
+    }
+    return validNotifications;
+  }, [inventory]);
+
 
   const updateNotifications = async (items: InventoryItem[], allProducts: Product[]) => {
     if (!items || !allProducts) return;
   
     const now = new Date();
     const productMap = new Map(allProducts.map(p => [p.id, p.name]));
+    const newNotifications: Notification[] = [];
+    const updatedNotifications: {key: string, changes: Partial<Notification>}[] = [];
+    const notificationsToDelete: string[] = [];
+
+    const existingNotifications = await db.notifications.toArray();
+    const notificationMap = new Map(existingNotifications.map(n => [n.inventoryItemId, n]));
   
     for (const item of items) {
       const daysUntilExpiry = differenceInDays(item.expiryDate, now);
@@ -31,11 +51,11 @@ export function TuInventarioDashboard() {
   
       if (!productName) continue;
   
-      const existingNotification = await db.notifications.get({ inventoryItemId: item.id });
+      const existingNotification = notificationMap.get(item.id);
   
       if (daysUntilExpiry <= 7) {
         if (!existingNotification) {
-          await db.notifications.add({
+          newNotifications.push({
             id: crypto.randomUUID(),
             inventoryItemId: item.id,
             productName,
@@ -45,21 +65,33 @@ export function TuInventarioDashboard() {
             read: false,
           });
         } else if (existingNotification.daysUntilExpiry !== daysUntilExpiry) {
-          await db.notifications.update(existingNotification.id, { daysUntilExpiry });
+           updatedNotifications.push({key: existingNotification.id, changes: { daysUntilExpiry }});
         }
       } else {
         if (existingNotification) {
-          await db.notifications.delete(existingNotification.id);
+          notificationsToDelete.push(existingNotification.id);
         }
       }
     }
+     // Also check for notifications related to deleted inventory items
+    const inventoryItemIds = new Set(items.map(i => i.id));
+    for (const notification of existingNotifications) {
+      if (!inventoryItemIds.has(notification.inventoryItemId)) {
+        notificationsToDelete.push(notification.id);
+      }
+    }
+
+
+    if (newNotifications.length > 0) await db.notifications.bulkAdd(newNotifications);
+    if (updatedNotifications.length > 0) await db.notifications.bulkUpdate(updatedNotifications);
+    if (notificationsToDelete.length > 0) await db.notifications.bulkDelete(notificationsToDelete);
   };
 
   useEffect(() => {
     if(inventory && products) {
       const interval = setInterval(() => {
         updateNotifications(inventory, products);
-      }, 1000 * 60 * 60 * 24); // Check once a day
+      }, 1000 * 60 * 60); // Check once an hour
       updateNotifications(inventory, products); // Initial check
       return () => clearInterval(interval);
     }
@@ -79,7 +111,7 @@ export function TuInventarioDashboard() {
         }
       }
 
-      if (!productId) throw new Error("Could not create or find product.");
+      if (!productId) throw new Error("No se pudo crear o encontrar el producto.");
 
       const newInventoryItem = {
         id: crypto.randomUUID(),
@@ -115,15 +147,15 @@ export function TuInventarioDashboard() {
         if(item) {
           const product = await db.products.get(item.productId);
           await db.inventory.delete(inventoryItemId);
-          // Also delete associated notification
-          const notification = await db.notifications.get({ inventoryItemId: inventoryItemId });
-          if (notification) {
-            await db.notifications.delete(notification.id);
-          }
+          
           toast({
               title: "Lote Eliminado",
               description: `El lote de ${product?.name || 'producto'} ha sido eliminado.`,
           });
+          // Trigger notification update
+          const currentProducts = await db.products.toArray();
+          const currentInventory = await db.inventory.toArray();
+          await updateNotifications(currentInventory, currentProducts);
         }
     } catch (error) {
         console.error("Failed to delete inventory item: ", error);
@@ -215,8 +247,7 @@ export function TuInventarioDashboard() {
   
   const handleClearNotifications = async () => {
     try {
-      const readNotifications = await db.notifications.where('read').equals(1).toArray();
-      await db.notifications.bulkDelete(readNotifications.map(n => n.id));
+      await db.notifications.where('read').equals(1).delete();
     } catch (error) {
       console.error("Failed to clear read notifications: ", error);
     }
