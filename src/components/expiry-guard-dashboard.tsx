@@ -229,7 +229,7 @@ export function ExpiryGuardDashboard() {
           onConsumeProduct={consumeInventoryItem}
         />
         <Tabs defaultValue="inventory" className="w-full">
-            <div className='flex justify-center border-b'>
+            <div className='flex justify-start border-b px-4 sm:px-6'>
                 <TabsList>
                     <TabsTrigger value="inventory">Inventario</TabsTrigger>
                     <TabsTrigger value="expiring-soon">Próximos a Caducar</TabsTrigger>
