@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProductList } from './product-list';
 import { ReportsDashboard } from './reports-dashboard';
 import { differenceInDays } from 'date-fns';
+import { ProductManagementDashboard } from './product-management-dashboard';
 
 export function ExpiryGuardDashboard() {
   const { toast } = useToast();
@@ -106,7 +107,7 @@ export function ExpiryGuardDashboard() {
         productName: product.name,
         quantity: quantityToConsume,
         unit: item.unit,
-        consumedDate: new Date(),
+consumedDate: new Date(),
       };
 
       await db.consumedItems.add(consumedItem);
@@ -133,6 +134,59 @@ export function ExpiryGuardDashboard() {
       });
     }
   };
+
+  const updateProduct = async (productId: string, newName: string, newUnit: Unit) => {
+    try {
+      const product = await db.products.get(productId);
+      if (!product) throw new Error("El producto no existe.");
+
+      await db.products.update(productId, { name: newName, unit: newUnit });
+      
+      // Update associated inventory items' units
+      const inventoryToUpdate = await db.inventory.where({ productId: productId }).toArray();
+      for (const item of inventoryToUpdate) {
+        await db.inventory.update(item.id, { unit: newUnit });
+      }
+
+      // Update associated consumed items' names and units
+      const consumedToUpdate = await db.consumedItems.where({ productId: productId }).toArray();
+       for (const item of consumedToUpdate) {
+        await db.consumedItems.update(item.id, { productName: newName, unit: newUnit });
+      }
+
+      toast({
+        title: "Producto Actualizado",
+        description: `"${product.name}" ha sido actualizado a "${newName}".`,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "No se pudo actualizar el producto.";
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
+    }
+  }
+
+  const deleteProduct = async (productId: string) => {
+    try {
+      const inventoryCount = await db.inventory.where({ productId: productId }).count();
+      if (inventoryCount > 0) {
+        throw new Error("No se puede eliminar un producto que tiene lotes de inventario activos.");
+      }
+      
+      const product = await db.products.get(productId);
+      if (!product) throw new Error("El producto no existe.");
+
+      // We can decide if we want to delete consumedItems history or not. For now, let's keep it.
+      await db.products.delete(productId);
+
+      toast({
+        title: "Producto Eliminado",
+        description: `El producto "${product.name}" ha sido eliminado.`,
+      });
+
+    } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : "No se pudo eliminar el producto.";
+       toast({ variant: "destructive", title: "Error", description: errorMessage });
+    }
+  }
   
   const productsWithInventory = useMemo<ProductWithInventory[]>(() => {
     if (!products || !inventory) return [];
@@ -231,10 +285,11 @@ export function ExpiryGuardDashboard() {
         />
         <Tabs defaultValue="inventory" className="w-full">
             <div className='flex justify-start border-b px-4 sm:px-6'>
-                <TabsList className="flex-wrap h-auto">
+                <TabsList className="grid w-full grid-cols-2 sm:flex sm:w-auto sm:flex-wrap h-auto">
                     <TabsTrigger value="inventory">Inventario</TabsTrigger>
                     <TabsTrigger value="expiring-soon">Próximos a Caducar</TabsTrigger>
                     <TabsTrigger value="reports">Reportes</TabsTrigger>
+                    <TabsTrigger value="manage-products">Gestionar Productos</TabsTrigger>
                 </TabsList>
             </div>
             <TabsContent value="inventory">
@@ -260,6 +315,13 @@ export function ExpiryGuardDashboard() {
             </TabsContent>
             <TabsContent value="reports">
                 <ReportsDashboard products={productsWithInventory} consumedItems={consumedItems || []} />
+            </TabsContent>
+            <TabsContent value="manage-products">
+              <ProductManagementDashboard 
+                products={products || []}
+                onUpdateProduct={updateProduct}
+                onDeleteProduct={deleteProduct}
+              />
             </TabsContent>
         </Tabs>
       </div>

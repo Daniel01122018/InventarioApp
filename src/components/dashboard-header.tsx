@@ -1,4 +1,4 @@
-import { ShieldCheck, MinusSquare } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { AddProductDialog } from "./add-product-dialog";
 import { ConsumeProductDialog } from "./consume-product-dialog";
 import type { Product, ProductWithInventory } from "@/lib/types";
