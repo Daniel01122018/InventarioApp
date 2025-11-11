@@ -29,6 +29,7 @@ import {
 import { Card, CardContent } from "./ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import React from "react";
+import { cn } from "@/lib/utils";
 
 type SortableKeys = 'name' | 'totalQuantity' | 'nextExpiryDate';
 
@@ -83,7 +84,7 @@ export function ProductList({
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <Card>
-        <CardContent className="p-4">
+        <CardContent className={cn("p-4", products.length === 0 && 'min-h-[400px]')}>
             {!isMinimalView && (
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
                     <div className="relative w-full sm:max-w-xs">
@@ -123,6 +124,7 @@ export function ProductList({
                   <TableHead>Estado General</TableHead>
                 </TableRow>
               </TableHeader>
+                <TableBody>
                 {products.length > 0 ? (
                   products.map((product) => {
                     const nextExpiryItem = product.inventory[0];
@@ -131,7 +133,7 @@ export function ProductList({
                     
                     return (
                      <Collapsible asChild key={product.id} open={isOpen} onOpenChange={() => toggleCollapsible(product.id)}>
-                        <TableBody>
+                        <>
                           <TableRow className="hover:bg-muted/50 cursor-pointer">
                             <TableCell>
                               <CollapsibleTrigger asChild>
@@ -197,19 +199,18 @@ export function ProductList({
                                 </TableCell>
                               </TableRow>
                           </CollapsibleContent>
-                        </TableBody>
+                        </>
                       </Collapsible>
                     );
                   })
                 ) : (
-                  <TableBody>
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center">
                         No se encontraron productos.
                       </TableCell>
                     </TableRow>
-                  </TableBody>
                 )}
+                </TableBody>
             </Table>
           </div>
         </CardContent>
