@@ -4,6 +4,7 @@ export type Product = {
   id: string;
   name: string;
   unit: Unit;
+  createdAt: Date;
 };
 
 export type InventoryItem = {

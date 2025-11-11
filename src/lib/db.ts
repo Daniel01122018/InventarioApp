@@ -7,10 +7,21 @@ export const db = new Dexie('TuInventarioDatabase') as Dexie & {
   consumedItems: EntityTable<ConsumedItem, 'id'>;
 };
 
+db.version(5).stores({
+    products: 'id, name, unit, createdAt',
+    inventory: 'id, productId, expiryDate, unit',
+    consumedItems: 'id, productId, consumedDate'
+});
+
 db.version(4).stores({
     products: 'id, name, unit',
     inventory: 'id, productId, expiryDate, unit',
     consumedItems: 'id, productId, consumedDate'
+}).upgrade(tx => {
+    // Add createdAt to existing products
+    return tx.table('products').toCollection().modify(product => {
+      product.createdAt = new Date();
+    });
 });
 
 db.version(3).stores({

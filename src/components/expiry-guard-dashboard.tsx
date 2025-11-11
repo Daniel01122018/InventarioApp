@@ -29,7 +29,12 @@ export function ExpiryGuardDashboard() {
         if (existingProduct) {
           productId = existingProduct.id;
         } else {
-          const newProduct: Product = { name: values.product.name, id: crypto.randomUUID(), unit: values.product.unit };
+          const newProduct: Product = { 
+            name: values.product.name, 
+            id: crypto.randomUUID(), 
+            unit: values.product.unit,
+            createdAt: new Date()
+          };
           const newProductId = await db.products.add(newProduct);
           productId = newProductId as string;
         }
@@ -107,7 +112,7 @@ export function ExpiryGuardDashboard() {
         productName: product.name,
         quantity: quantityToConsume,
         unit: item.unit,
-consumedDate: new Date(),
+        consumedDate: new Date(),
       };
 
       await db.consumedItems.add(consumedItem);
